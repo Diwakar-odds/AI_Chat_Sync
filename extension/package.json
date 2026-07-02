@@ -1,0 +1,53 @@
+{
+  "name": "contextgap",
+  "displayName": "ContextGap",
+  "description": "Global AI Chat Sync Engine",
+  "version": "0.0.1",
+  "publisher": "Diwakar-odds",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Diwakar-odds/AI_Chat_Sync.git"
+  },
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "contextgap.push",
+        "title": "ContextGap: Push State"
+      },
+      {
+        "command": "contextgap.pull",
+        "title": "ContextGap: Pull State"
+      },
+      {
+        "command": "contextgap.syncNow",
+        "title": "ContextGap: Sync Now"
+      },
+      {
+        "command": "contextgap.toggleAutoSync",
+        "title": "ContextGap: Toggle Auto-Sync"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "@types/node": "20.x",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "octokit": "^4.0.2"
+  }
+}
