@@ -1,10 +1,9 @@
 import { IStorageProvider } from './storage';
-import { Octokit } from 'octokit';
 import * as vscode from 'vscode';
 import { getGitHubSession } from './auth';
 
 export class GitHubGistProvider implements IStorageProvider {
-    private octokit: Octokit | undefined;
+    private octokit: any | undefined;
     private gistId: string | undefined;
     private gistFilename = 'contextgap-state.json';
 
@@ -14,6 +13,7 @@ export class GitHubGistProvider implements IStorageProvider {
             if (!session) {
                 throw new Error('Not authenticated with GitHub');
             }
+            const { Octokit } = await import('octokit');
             this.octokit = new Octokit({ auth: session.accessToken });
         }
     }
@@ -32,7 +32,7 @@ export class GitHubGistProvider implements IStorageProvider {
                 });
             } else {
                 const gists = await this.octokit!.rest.gists.list();
-                const existing = gists.data.find(g => g.description === `ContextGap Backup: ${workspaceId}`);
+                const existing = gists.data.find((g: any) => g.description === `ContextGap Backup: ${workspaceId}`);
                 
                 if (existing) {
                     this.gistId = existing.id;
@@ -59,7 +59,7 @@ export class GitHubGistProvider implements IStorageProvider {
         try {
             if (!this.gistId) {
                 const gists = await this.octokit!.rest.gists.list();
-                const existing = gists.data.find(g => g.description === `ContextGap Backup: ${workspaceId}`);
+                const existing = gists.data.find((g: any) => g.description === `ContextGap Backup: ${workspaceId}`);
                 if (existing) {
                     this.gistId = existing.id;
                 }

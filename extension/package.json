@@ -2,8 +2,9 @@
   "name": "contextgap",
   "displayName": "ContextGap",
   "description": "Global AI Chat Sync Engine",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "publisher": "Diwakar-odds",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Diwakar-odds/AI_Chat_Sync.git"
@@ -15,7 +16,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -35,7 +38,23 @@
         "command": "contextgap.toggleAutoSync",
         "title": "ContextGap: Toggle Auto-Sync"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "ContextGap",
+      "properties": {
+        "contextgap.storageMethod": {
+          "type": "string",
+          "enum": ["github", "custom_server"],
+          "default": "github",
+          "description": "Choose the backend storage method."
+        },
+        "contextgap.customServerUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "URL of your custom self-hosted ContextGap server."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

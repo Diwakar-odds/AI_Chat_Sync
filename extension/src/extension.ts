@@ -4,20 +4,39 @@ import * as crypto from 'crypto';
 import { getGitHubSession } from './auth';
 import { LocalStorageWatcher } from './watcher';
 import { GitHubGistProvider } from './gistProvider';
+import { CustomServerProvider } from './customServerProvider';
+import { IStorageProvider } from './storage';
 
 let statusBarItem: vscode.StatusBarItem;
 let autoSyncEnabled = true;
 let watcher: LocalStorageWatcher;
-let gistProvider = new GitHubGistProvider();
+let storageProvider: IStorageProvider;
 let workspaceId: string;
 let isSyncing = false;
 
+function updateStorageProvider() {
+    const config = vscode.workspace.getConfiguration('contextgap');
+    const method = config.get<string>('storageMethod');
+    if (method === 'custom_server') {
+        storageProvider = new CustomServerProvider();
+    } else {
+        storageProvider = new GitHubGistProvider();
+    }
+}
+
 export async function activate(context: vscode.ExtensionContext) {
     console.log('ContextGap is now active!');
+    updateStorageProvider();
+    vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('contextgap.storageMethod') || e.affectsConfiguration('contextgap.customServerUrl')) {
+            updateStorageProvider();
+        }
+    });
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    const workspacePath = workspaceFolders ? workspaceFolders[0].uri.fsPath : 'no-workspace';
-    workspaceId = crypto.createHash('md5').update(workspacePath).digest('hex');
+    // Use the workspace NAME (folder name) instead of absolute path so it syncs across different devices
+    const workspaceName = workspaceFolders ? workspaceFolders[0].name : 'no-workspace';
+    workspaceId = crypto.createHash('md5').update(workspaceName).digest('hex');
 
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBarItem.command = 'contextgap.syncNow';
@@ -62,7 +81,7 @@ async function pushState(dbPath: string | undefined) {
         isSyncing = true;
         statusBarItem.text = '$(sync~spin) ContextGap: Pushing...';
         const fileData = fs.readFileSync(dbPath).toString('base64');
-        await gistProvider.push(workspaceId, { fileData, timestamp: Date.now() });
+        await storageProvider.push(workspaceId, { fileData, timestamp: Date.now() });
         updateStatusBar();
     } catch (e) {
         vscode.window.showErrorMessage('ContextGap: Failed to push state to GitHub.');
@@ -77,7 +96,7 @@ async function pullState(dbPath: string | undefined) {
     try {
         isSyncing = true;
         statusBarItem.text = '$(sync~spin) ContextGap: Pulling...';
-        const payload = await gistProvider.pull(workspaceId);
+        const payload = await storageProvider.pull(workspaceId);
         
         // Basic conflict check: Only pull if the local DB is older or doesn't exist
         if (payload && payload.fileData) {

@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -7,8 +9,11 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// In-memory store for Phase 1 (Replace with PostgreSQL later)
-const storageStore: Record<string, { fileData: string, timestamp: number }> = {};
+// Ensure data directory exists
+const DATA_DIR = path.join(__dirname, '..', 'data');
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 app.get('/', (req, res) => {
   res.send('ContextGap Self-Hosted Server is running!');
@@ -18,17 +23,29 @@ app.post('/api/sync/:workspaceId', (req, res) => {
     const { workspaceId } = req.params;
     const { fileData, timestamp } = req.body;
     
-    storageStore[workspaceId] = { fileData, timestamp };
-    console.log(`Saved backup for workspace: ${workspaceId}`);
-    res.json({ success: true });
+    try {
+        const filePath = path.join(DATA_DIR, `${workspaceId}.json`);
+        fs.writeFileSync(filePath, JSON.stringify({ fileData, timestamp }, null, 2));
+        console.log(`Saved backup for workspace: ${workspaceId}`);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Error saving data:', e);
+        res.status(500).json({ error: 'Failed to save data' });
+    }
 });
 
 app.get('/api/sync/:workspaceId', (req, res) => {
     const { workspaceId } = req.params;
-    const data = storageStore[workspaceId];
+    const filePath = path.join(DATA_DIR, `${workspaceId}.json`);
     
-    if (data) {
-        res.json(data);
+    if (fs.existsSync(filePath)) {
+        try {
+            const data = fs.readFileSync(filePath, 'utf-8');
+            res.json(JSON.parse(data));
+        } catch (e) {
+            console.error('Error reading data:', e);
+            res.status(500).json({ error: 'Failed to read data' });
+        }
     } else {
         res.status(404).json({ error: 'No context found' });
     }
