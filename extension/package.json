@@ -2,7 +2,7 @@
   "name": "contextgap",
   "displayName": "ContextGap",
   "description": "Global AI Chat Sync Engine",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "Diwakar-odds",
   "license": "MIT",
   "repository": {
@@ -44,7 +44,10 @@
       "properties": {
         "contextgap.storageMethod": {
           "type": "string",
-          "enum": ["github", "custom_server"],
+          "enum": [
+            "github",
+            "custom_server"
+          ],
           "default": "github",
           "description": "Choose the backend storage method."
         },
