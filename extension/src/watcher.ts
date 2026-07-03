@@ -1,43 +1,49 @@
+/**
+ * watcher.ts
+ * 
+ * Watches the IDE's chat storage path (as determined by the active IdeAdapter)
+ * for changes and triggers sync callbacks.
+ */
+
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
+import { IIdeAdapter } from './adapters/IdeAdapter';
 
 export class LocalStorageWatcher {
     private watcher: fs.FSWatcher | undefined;
     private dbPath: string | undefined;
 
-    constructor(private context: vscode.ExtensionContext, private onChange: () => void) {}
+    constructor(
+        private context: vscode.ExtensionContext,
+        private adapter: IIdeAdapter,
+        private onChange: () => void
+    ) {}
 
-    public startWatching() {
-        if (!this.context.storageUri) {
-            console.warn('ContextGap: No workspace storage found (Open a folder first).');
+    public async startWatching() {
+        const watchPath = await this.adapter.getWatchPath();
+
+        if (!watchPath) {
+            console.warn(`ContextGap [${this.adapter.ideName}]: No watch path found. Open a folder first.`);
             return;
         }
 
-        // VS Code / Cursor storageUri is typically: .../workspaceStorage/<hash>/<extension-name>
-        // The main AI chat SQLite DB is typically at: .../workspaceStorage/<hash>/state.vscdb
-        const extensionStoragePath = this.context.storageUri.fsPath;
-        const workspaceStoragePath = path.dirname(extensionStoragePath);
-        this.dbPath = path.join(workspaceStoragePath, 'state.vscdb');
+        this.dbPath = watchPath;
+        console.log(`ContextGap [${this.adapter.ideName}]: Watching chat state at ${watchPath}`);
 
-        if (!fs.existsSync(this.dbPath)) {
-            console.log(`ContextGap: IDE state DB not found at ${this.dbPath}`);
-            return;
-        }
-
-        console.log(`ContextGap: Watching AI Chat State at ${this.dbPath}`);
-        
-        // Watch the SQLite file for changes (Debounce recommended in production)
         let debounceTimer: NodeJS.Timeout;
-        this.watcher = fs.watch(this.dbPath, (eventType) => {
-            if (eventType === 'change') {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    console.log('ContextGap: Detected AI chat state change!');
-                    this.onChange();
-                }, 2000); // Wait 2s for DB writes to settle
-            }
-        });
+        try {
+            this.watcher = fs.watch(watchPath, { recursive: false }, (eventType) => {
+                if (eventType === 'change' || eventType === 'rename') {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        console.log(`ContextGap [${this.adapter.ideName}]: Detected chat change, syncing...`);
+                        this.onChange();
+                    }, 2000); // 2s debounce to let writes settle
+                }
+            });
+        } catch (e) {
+            console.error(`ContextGap: Failed to watch path ${watchPath}:`, e);
+        }
     }
 
     public stopWatching() {
@@ -46,7 +52,7 @@ export class LocalStorageWatcher {
             this.watcher = undefined;
         }
     }
-    
+
     public getDbPath(): string | undefined {
         return this.dbPath;
     }
