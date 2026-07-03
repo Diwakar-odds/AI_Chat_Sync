@@ -35,11 +35,16 @@ export function detectIde(): DetectionResult {
     const env = process.env;
 
     // 1. Antigravity IDE
-    if (env.ANTIGRAVITY_AGENT === '1') {
+    const isAntigravity = env.ANTIGRAVITY_AGENT === '1' || 
+                          (env.ANTIGRAVITY_EDITOR_APP_ROOT !== undefined) ||
+                          (env.VSCODE_CWD && env.VSCODE_CWD.toLowerCase().includes('antigravity')) ||
+                          (env.VSCODE_CODE_CACHE_PATH && env.VSCODE_CODE_CACHE_PATH.toLowerCase().includes('antigravity'));
+
+    if (isAntigravity) {
         return {
             adapter: new AntigravityAdapter(),
             confidence: 'high',
-            reason: 'ANTIGRAVITY_AGENT environment variable detected'
+            reason: 'Antigravity IDE environment detected'
         };
     }
 
